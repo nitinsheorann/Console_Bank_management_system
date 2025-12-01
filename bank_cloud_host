@@ -1,0 +1,331 @@
+import os
+import psycopg2
+from colorama import Fore, Style, init
+
+init(autoreset=True)
+
+PASSWORD = "##################"       # <---------------- Put your Neon.Tech password here
+
+# ---------- Neon postgreSQL connection config ----------
+DB_CONFIG = {
+    "dbname": "ABC",
+    "user": "ABC_owner",
+    "password": PASSWORD,
+    "host": "Enter_host_link",
+    "port": "8080",
+    "sslmode": "require",
+}
+
+conn = psycopg2.connect(**DB_CONFIG)
+cur = conn.cursor()
+
+# ========== Helper functions ==========
+
+def getname(n99):
+    cur.execute("SELECT name FROM customer WHERE atmno = %s", (n99,))
+    datax = cur.fetchone()
+    return datax[0] if datax else None
+
+def getphone(n99):
+    cur.execute("SELECT phoneno FROM customer WHERE atmno = %s", (n99,))
+    datax = cur.fetchone()
+    return datax[0] if datax else None
+
+def getatmno(n99):
+    cur.execute("SELECT atmno FROM customer WHERE atmno = %s", (n99,))
+    datax = cur.fetchone()
+    return datax[0] if datax else None
+
+def getamount(n99):
+    cur.execute("SELECT totalamount FROM customer WHERE atmno = %s", (n99,))
+    datax = cur.fetchone()
+    return datax[0] if datax else None
+
+# ========== Main loop ==========
+
+while True:
+    print()
+    print()
+    print()
+    print(Fore.BLUE + Style.BRIGHT + "WELCOME TO BMS")
+    print(Fore.BLUE + "******************************************************************")
+    print(Fore.BLUE + "******************************************************************")
+    print(Fore.YELLOW + "1. open account")
+    print(Fore.YELLOW + "2. transfer money")
+    print(Fore.YELLOW + "3. check balance")
+    print(Fore.YELLOW + "4. delete account")
+    print(" ")
+
+    try:
+        option1 = int(input(Fore.WHITE + "enter your choice: "))
+    except ValueError:
+        os.system('cls')
+        print(Fore.RED + "Invalid input, please enter a number.")
+        continue
+
+    os.system('cls')
+    print()
+
+    # ---------- condition 1 = open account ----------
+    if option1 == 1:
+        cname = str(input(Fore.WHITE + "enter your name:  "))
+        print()
+        cnumber = int(input(Fore.WHITE + "enter your mobile number:  "))
+
+        # account number generation
+        catmno_str = str(int(cnumber / 2)) + str(sum(ord(i) for i in cname))
+        catmno = int(catmno_str[:9]) if len(catmno_str) > 9 else int(catmno_str)
+
+        print()
+        camount = float(input(Fore.WHITE + "total amount you want to deposit:  "))
+        print()
+        cpass = int(input(Fore.WHITE + "set password (integer only):   "))
+        print()
+        os.system('cls')
+
+        while True:
+            ctemp1 = int(input(Fore.WHITE + "repeat your password:   "))
+
+            if cpass == ctemp1:
+                cur.execute("""
+                    INSERT INTO customer(name, phoneno, atmno, totalamount, pass)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (cname, cnumber, catmno, camount, cpass))
+                conn.commit()
+
+                os.system('cls')
+                print(Fore.GREEN + "Thanks to be our customer")
+                print()
+                print(Fore.WHITE + "**********************************")
+                print(Fore.GREEN + f"* Your account no is:   {catmno}        Your password is: {cpass}")
+                print(Fore.WHITE + "**********************************")
+                break
+            else:
+                print()
+                print(Fore.RED + "Wrong password, enter again")
+                continue
+
+        print()
+        print()
+        print()
+        print()
+        print(Fore.YELLOW + "1. to go to home page.")
+        print(Fore.YELLOW + "2. to know your account detail")
+        print()
+        try:
+            option2 = int(input(Fore.WHITE + "enter your option: "))
+        except ValueError:
+            option2 = 1
+
+        os.system('cls')
+        if option2 == 1:
+            continue
+        elif option2 == 2:
+            print()
+            print(Fore.GREEN + f"Customer Name: {cname}")
+            print(Fore.GREEN + f"Mobile no: {cnumber}")
+            print(Fore.GREEN + f"Account no: {catmno}")
+        else:
+            print()
+            print(Fore.RED + "wrong key.")
+            continue
+        continue
+
+    # ---------- condition 2 = transfer money ----------
+    elif option1 == 2:
+        try:
+            townno = int(input(Fore.WHITE + "enter your account no: "))
+        except ValueError:
+            os.system('cls')
+            print(Fore.RED + "Invalid account number.")
+            continue
+
+        cur.execute("SELECT * FROM customer WHERE atmno = %s", (townno,))
+        data1 = cur.fetchone()
+        if data1:
+            while True:
+                print()
+                try:
+                    tatmno = int(input(Fore.WHITE + "enter account no of receiver: "))
+                except ValueError:
+                    os.system('cls')
+                    print(Fore.RED + "Invalid account number.")
+                    continue
+
+                cur.execute("SELECT * FROM customer WHERE atmno = %s", (tatmno,))
+                data2 = cur.fetchone()
+
+                if data2:
+                    print()
+                    v2 = 1
+                    while v2 == 1:
+                        try:
+                            tamount = float(input(Fore.WHITE + "enter amount you want to transfer: "))
+                        except ValueError:
+                            os.system('cls')
+                            print(Fore.RED + "Invalid amount.")
+                            continue
+
+                        cur.execute("SELECT totalamount FROM customer WHERE atmno = %s", (townno,))
+                        amountpresent1 = cur.fetchone()
+                        amountpresent1 = float(amountpresent1[0])
+
+                        if amountpresent1 >= tamount:
+                            v2 = 0
+                            print()
+                            v5 = 3
+                            while v5 > 0:
+                                try:
+                                    tpass = int(input(Fore.WHITE + "enter your password: "))
+                                except ValueError:
+                                    os.system('cls')
+                                    print(Fore.RED + "Invalid password format.")
+                                    v5 -= 1
+                                    continue
+
+                                cur.execute("SELECT pass FROM customer WHERE atmno = %s", (townno,))
+                                pass1 = cur.fetchone()
+                                pass1 = pass1[0]
+                                if pass1 == tpass:
+                                    print()
+                                    # deduct from sender
+                                    cur.execute(
+                                        "UPDATE customer SET totalamount = %s WHERE atmno = %s",
+                                        (amountpresent1 - tamount, townno),
+                                    )
+                                    conn.commit()
+                                    # get receiver balance
+                                    cur.execute("SELECT totalamount FROM customer WHERE atmno = %s", (tatmno,))
+                                    amountpresent2 = cur.fetchone()
+                                    amountpresent2 = float(amountpresent2[0])
+                                    # add to receiver
+                                    cur.execute(
+                                        "UPDATE customer SET totalamount = %s WHERE atmno = %s",
+                                        (amountpresent2 + tamount, tatmno),
+                                    )
+                                    conn.commit()
+                                    print()
+                                    os.system('cls')
+                                    print(Fore.LIGHTGREEN_EX + f"Amount transfer successful from {townno}")
+                                    print(Fore.GREEN + f"now your amount is: {amountpresent1 - tamount}")
+                                    print()
+                                    v5 = 0
+                                else:
+                                    os.system('cls')
+                                    print()
+                                    print(Fore.RED + "You entered wrong password...")
+                                    print(Fore.RED + f"Only {v5 - 1} tries available.")
+                                    v5 = v5 - 1
+                        else:
+                            os.system('cls')
+                            print(Fore.RED + "Your balance is lower than this amount... enter again...")
+                            print()
+                    break
+                else:
+                    os.system('cls')
+                    print()
+                    print(Fore.RED + "This account not available... enter another account no...")
+                    print()
+                    continue
+        else:
+            os.system('cls')
+            print()
+            print(Fore.RED + "Account not found")
+
+        continue
+
+    # ---------- condition 3 = check balance ----------
+    elif option1 == 3:
+        print()
+        try:
+            cbalance = int(input(Fore.WHITE + "enter your account number: "))
+        except ValueError:
+            os.system('cls')
+            print(Fore.RED + "Invalid account number.")
+            continue
+
+        cur.execute("SELECT totalamount FROM customer WHERE atmno = %s", (cbalance,))
+        nowamount = cur.fetchone()
+        if nowamount:
+            v6 = 3
+            while v6 > 0:
+                try:
+                    cpass = int(input(Fore.WHITE + "enter your password: "))
+                except ValueError:
+                    os.system('cls')
+                    print(Fore.RED + "Invalid password format.")
+                    v6 -= 1
+                    continue
+
+                cur.execute("SELECT pass FROM customer WHERE atmno = %s", (cbalance,))
+                pass3 = cur.fetchone()
+                pass3 = pass3[0]
+                if pass3 == cpass:
+                    nowamount = float(nowamount[0])
+                    print()
+                    os.system('cls')
+                    print(Fore.GREEN + f"Your balance is: {nowamount}")
+                    v6 = 0
+                else:
+                    print()
+                    os.system('cls')
+                    print(Fore.RED + "Wrong password...")
+                    print(Fore.RED + f"{v6 - 1} tries available..")
+                    v6 = v6 - 1
+        else:
+            os.system('cls')
+            print()
+            print(Fore.RED + "You entered wrong account number....")
+        continue
+
+    # ---------- condition 4 = delete account ----------
+    elif option1 == 4:
+        print()
+        os.system('cls')
+        try:
+            datmno = int(input(Fore.WHITE + "enter your account number: "))
+        except ValueError:
+            os.system('cls')
+            print(Fore.RED + "Invalid account number.")
+            continue
+
+        print()
+        cur.execute("SELECT pass FROM customer WHERE atmno = %s", (datmno,))
+        pass4 = cur.fetchone()
+        if pass4:
+            pass4 = pass4[0]
+            v7 = 3
+            while v7 > 0:
+                try:
+                    dpass = int(input(Fore.WHITE + "enter your password: "))
+                except ValueError:
+                    os.system('cls')
+                    print(Fore.RED + "Invalid password format.")
+                    v7 -= 1
+                    continue
+
+                if dpass == pass4:
+                    v7 = 0
+                    cur.execute("DELETE FROM customer WHERE atmno = %s", (datmno,))
+                    conn.commit()
+                    os.system('cls')
+                    print()
+                    print(Fore.GREEN + "Your account has been deleted successfully. You can give your feedback")
+                    print()
+                    print()
+                else:
+                    print()
+                    os.system('cls')
+                    print(Fore.RED + "You entered wrong password...")
+                    print(Fore.RED + f"{v7 - 1} tries available.")
+                    v7 = v7 - 1
+        else:
+            print()
+            os.system('cls')
+            print(Fore.RED + "You do not have any account..")
+
+    else:
+        print(Fore.RED + "You entered wrong key")
+
+cur.close()
+conn.close()
